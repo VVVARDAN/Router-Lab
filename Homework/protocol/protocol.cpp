@@ -91,7 +91,10 @@ RipngErrorCode disassemble(const uint8_t *packet, uint32_t len,
     }
     if(output->entries[i].metric != 0xFF){
       //TODO
+      if(!(output->entries[i].metric>=1 && output->entries[i].metric<=16))
       return RipngErrorCode::ERR_RIPNG_BAD_METRIC;
+      if(!(output->entries[i].prefix_len>=0 && output->entries[i].prefix_len<=128))
+      return RipngErrorCode::ERR_RIPNG_INCONSISTENT_PREFIX_LENGTH;
     }
   }
   //cout<<len<<endl;
