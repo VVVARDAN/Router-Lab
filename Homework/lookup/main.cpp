@@ -20,6 +20,16 @@ int main(int argc, char *argv[]) {
       assert(inet_pton(AF_INET6, addr_buffer, &addr) == 1);
       assert(inet_pton(AF_INET6, nexthop_buffer, &nexthop) == 1);
       assert(0 <= len && len <= 128);
+      /*for(int i = 0;i<16;i++){
+        printf("%lx ",addr.s6_addr[i]);
+      }
+      printf("\n");
+      printf("%d\n",len);
+      for(int i = 0;i<16;i++){
+        printf("%lx ",len_to_mask(len).s6_addr[i]);
+      }
+      printf("\n");
+      printf("ALERTcheck %d\n",mask_to_len(len_to_mask(len)) != len);*/
       if ((len_to_mask(len) & addr) != addr ||
           mask_to_len(len_to_mask(len)) != len) {
         printf("Invalid\n");
