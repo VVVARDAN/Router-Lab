@@ -137,8 +137,8 @@ uint32_t assemble(const RipngPacket *rip, uint8_t *buffer) {
     }
     //cout<<endl;
     //buffer[i+16] = rip->entries[u].route_tag >> 8;
-    //buffer[i+17] = rip->entries[u].route_tag & 0xff;
-    //buffer[i+18] = (int)rip->entries[u].prefix_len;
+    buffer[i+17] = rip->entries[u].route_tag >> 8;
+    buffer[i+18] = (int)rip->entries[u].prefix_len;
     buffer[i+19] = (int)rip->entries[u].metric;
     //cout<<"metric: "<<(int)rip->entries[u].metric<<endl;
     //printf("%02x ", buffer[i+19]);
