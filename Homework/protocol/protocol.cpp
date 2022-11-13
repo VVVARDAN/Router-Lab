@@ -91,7 +91,7 @@ RipngErrorCode disassemble(const uint8_t *packet, uint32_t len,
     }
     if(output->entries[i].metric != 0xFF){
       //TODO
-      //return RipngErrorCode::ERR_RIPNG_BAD_METRIC;
+      return RipngErrorCode::ERR_RIPNG_BAD_METRIC;
     }
   }
   //cout<<len<<endl;
@@ -114,18 +114,49 @@ RipngErrorCode disassemble(const uint8_t *packet, uint32_t len,
 uint32_t assemble(const RipngPacket *rip, uint8_t *buffer) {
   // TODO
  // buffer+=4;
-  RipngPacket *raw = (RipngPacket *)buffer;
   
-  //cout<<"command here: "<<rip->command<<endl;
-  raw->command = rip->command;
-  
-  raw->numEntries = rip->numEntries;
-  for(int i = 0;i<raw->numEntries;i++){
-    raw->entries[i].prefix_or_nh = rip->entries[i].prefix_or_nh;
-    raw->entries[i].route_tag = rip->entries[i].route_tag;
-    raw->entries[i].prefix_len = rip->entries[i].prefix_len;
-    raw->entries[i].metric = rip->entries[i].metric;
+  buffer[0] = (int)rip->command;
+  //cout<<"cur com: "<<(int)buffer[0]<<endl;
+  buffer[1] = 0x01;
+  buffer[2] = buffer[3] = 0x00;
+  /*for (uint32_t i = 0; i < 4; i++) {
+        printf("%02x ", buffer[i]);
   }
+  cout<<endl;*/
+  buffer+=4;
+  int u = 0;
+  int i = 0;
+  while(u<rip->numEntries){
+    //ripng_rte cur = (ripng_rte) rip->entries[u];
+    for(int j = 0;j<16;j++){ 
+      buffer[i+j] = rip->entries[u].prefix_or_nh.s6_addr[j];
+    //cout<<rip->entries[u].prefix_or_nh.s6_addr<<" ";
+    }
+    //cout<<endl;
+    //buffer[i+16] = rip->entries[u].route_tag >> 8;
+    //buffer[i+17] = rip->entries[u].route_tag & 0xff;
+    //buffer[i+18] = (int)rip->entries[u].prefix_len;
+    buffer[i+19] = (int)rip->entries[u].metric;
+    //cout<<"metric: "<<(int)rip->entries[u].metric<<endl;
+    //printf("%02x ", buffer[i+19]);
+    i+=20;
+    u++;
+  }
+  //printf("%02x ", buffer[19]);
+  //cout<<endl;
+  //cout<<"command here: "<<rip->command<<endl;
+  //raw->command = rip->command;
+  
+  /*raw->numEntries = rip->numEntries;
+  for(int i = 0;i<raw->numEntries;i++){
+    //cout<<"route tag: " << rip->entries[i].route_tag<<endl;
+    //raw->entries[i] = rip->entries[i];
+    
+     raw->entries[i].prefix_or_nh = rip->entries[i].prefix_or_nh;
+     raw->entries[i].route_tag = rip->entries[i].route_tag;
+     raw->entries[i].prefix_len = rip->entries[i].prefix_len;
+     raw->entries[i].metric = rip->entries[i].metric;
+  }*/
   //cout<<"entry num: " << rip->numEntries<<endl;
   //cout<<"command "<<raw->command<<endl;
   /*u32 count = rip->numEntries;
