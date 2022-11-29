@@ -29,7 +29,7 @@ in6_addr addrs[N_IFACE_ON_BOARD] = {
     {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      0x00, 0x07, 0x00, 0x01},
 };
-// default gateway: fd00::3:2
+// 默认网关：fd00::3:2
 in6_addr default_gateway = {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x02};
 #else
@@ -49,7 +49,7 @@ in6_addr addrs[N_IFACE_ON_BOARD] = {
     {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      0x00, 0x03, 0x00, 0x01},
 };
-// default gateway: fd00::1:2
+// 默认网关：fd00::1:2
 in6_addr default_gateway = {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02};
 #endif
@@ -84,7 +84,6 @@ int main(int argc, char *argv[]) {
       .addr = in6_addr{0}, .len = 0, .if_index = 1, .nexthop = default_gateway};
   update(true, entry);
 
-  uint64_t last_time = 0;
   while (1) {
     uint64_t time = HAL_GetTicks();
 
@@ -112,7 +111,7 @@ int main(int argc, char *argv[]) {
       printf("Received invalid ipv6 packet (%d < %d)\n", res, sizeof(ip6_hdr));
       continue;
     }
-    uint16_t plen = htons(ip6->ip6_plen);
+    uint16_t plen = ntohs(ip6->ip6_plen);
     if (res < plen + sizeof(ip6_hdr)) {
       printf("Received invalid ipv6 packet (%d < %d + %d)\n", res, plen,
              sizeof(ip6_hdr));
@@ -152,7 +151,6 @@ int main(int argc, char *argv[]) {
         // 检查 UDP 端口，判断是否为 DHCPv6 message
         udphdr *udp = (udphdr *)&packet[sizeof(ip6_hdr)];
         if (false) {
-
           dhcpv6_hdr *dhcpv6 =
               (dhcpv6_hdr *)&packet[sizeof(ip6_hdr) + sizeof(udphdr)];
           // TODO（1 行）
@@ -205,7 +203,7 @@ int main(int argc, char *argv[]) {
 
             // 1. Server Identifier：根据本路由器在本接口上的 MAC 地址生成。
             //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.3
-            //    - Option Code: 22
+            //    - Option Code: 2
             //    - Option Length: 14
             //    - DUID Type: 1 (Link-layer address plus time)
             //    - Hardware Type: 1 (Ethernet)

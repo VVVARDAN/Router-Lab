@@ -17,22 +17,58 @@ uint8_t output[2048];
 // for online experiment, don't change
 #ifdef ROUTER_PC1
 // 0: fd00::1:2/112
-// 1: fd00::3:1/112
-// 2: fd00::6:1/112
-// 3: fd00::7:1/112
+// 1: fd00::6:1/112
+// 2: fd00::7:1/112
+// 3: fd00::8:1/112
 in6_addr addrs[N_IFACE_ON_BOARD] = {
     {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      0x00, 0x01, 0x00, 0x02},
     {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x03, 0x00, 0x01},
-    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      0x00, 0x06, 0x00, 0x01},
     {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      0x00, 0x07, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x08, 0x00, 0x01},
 };
 // 默认网关：fd00::1:1
 in6_addr default_gateway = {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01};
+#elif defined(ROUTER_R2)
+// 0: fd00::3:2/112
+// 1: fd00::4:1/112
+// 2: fd00::7:1/112
+// 3: fd00::8:1/112
+in6_addr addrs[N_IFACE_ON_BOARD] = {
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x03, 0x00, 0x02},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x04, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x07, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x08, 0x00, 0x01},
+};
+// 默认网关：fd00::3:1
+in6_addr default_gateway = {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x01};
+#elif defined(ROUTER_PC2)
+// 0: fd00::5:1/112
+// 1: fd00::6:1/112
+// 2: fd00::7:1/112
+// 3: fd00::8:1/112
+in6_addr addrs[N_IFACE_ON_BOARD] = {
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x05, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x06, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x07, 0x00, 0x01},
+    {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+     0x00, 0x08, 0x00, 0x01},
+};
+// 默认网关：fd00::5:2
+in6_addr default_gateway = {0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x02};
 #else
 
 // 自己调试用，你可以按需进行修改
@@ -152,6 +188,7 @@ int main(int argc, char *argv[]) {
   current_transfer.last_block_number = 0;
 
   bool done = false;
+  uint64_t last_time = 0;
   while (!done) {
     // 初始状态下，尝试向服务器发送 Read/Write Request
     if (current_transfer.state == Initial) {
@@ -167,58 +204,61 @@ int main(int argc, char *argv[]) {
       if (HAL_GetNeighborMacAddress(dest_if, nexthop, &dest_mac) == 0) {
         // 找到了下一跳 MAC 地址
 
-        // 构造响应的 IPv6 头部
-        // IPv6 header
-        ip6_hdr *reply_ip6 = (ip6_hdr *)&output[0];
-        // flow label
-        reply_ip6->ip6_flow = 0;
-        // version
-        reply_ip6->ip6_vfc = 6 << 4;
-        // next header
-        reply_ip6->ip6_nxt = IPPROTO_UDP;
-        // hop limit
-        reply_ip6->ip6_hlim = 255;
-        // src ip
-        reply_ip6->ip6_src = addrs[0];
-        // dst ip
-        reply_ip6->ip6_dst = current_transfer.server_addr;
+        // 限制发送速度，每 1s 重试一次
+        if (HAL_GetTicks() - last_time > 1000) {
+          // 构造响应的 IPv6 头部
+          // IPv6 header
+          ip6_hdr *reply_ip6 = (ip6_hdr *)&output[0];
+          // flow label
+          reply_ip6->ip6_flow = 0;
+          // version
+          reply_ip6->ip6_vfc = 6 << 4;
+          // next header
+          reply_ip6->ip6_nxt = IPPROTO_UDP;
+          // hop limit
+          reply_ip6->ip6_hlim = 255;
+          // src ip
+          reply_ip6->ip6_src = addrs[0];
+          // dst ip
+          reply_ip6->ip6_dst = current_transfer.server_addr;
 
-        udphdr *reply_udp = (udphdr *)&output[sizeof(ip6_hdr)];
-        // src port
-        reply_udp->uh_sport = htons(current_transfer.client_tid);
-        // dst port
-        reply_udp->uh_dport = htons(69);
+          udphdr *reply_udp = (udphdr *)&output[sizeof(ip6_hdr)];
+          // src port
+          reply_udp->uh_sport = htons(current_transfer.client_tid);
+          // dst port
+          reply_udp->uh_dport = htons(69);
 
-        uint8_t *reply_tftp =
-            (uint8_t *)&output[sizeof(ip6_hdr) + sizeof(udphdr)];
-        uint16_t tftp_len = 0;
+          uint8_t *reply_tftp =
+              (uint8_t *)&output[sizeof(ip6_hdr) + sizeof(udphdr)];
+          uint16_t tftp_len = 0;
 
-        if (current_transfer.is_read) {
-          // opcode = 0x01(read)
-          reply_tftp[tftp_len++] = 0x00;
-          reply_tftp[tftp_len++] = 0x01;
-        } else {
-          // opcode = 0x02(write)
-          reply_tftp[tftp_len++] = 0x00;
-          reply_tftp[tftp_len++] = 0x02;
+          if (current_transfer.is_read) {
+            // opcode = 0x01(read)
+            reply_tftp[tftp_len++] = 0x00;
+            reply_tftp[tftp_len++] = 0x01;
+          } else {
+            // opcode = 0x02(write)
+            reply_tftp[tftp_len++] = 0x00;
+            reply_tftp[tftp_len++] = 0x02;
+          }
+
+          // TODO（4 行）
+          // 文件名字段（argv[3]）
+
+          // TODO（4 行）
+          // 传输模式字段，设为 octet
+
+          // 根据 TFTP 消息长度，计算 UDP 和 IPv6 头部中的长度字段
+          uint16_t udp_len = tftp_len + sizeof(udphdr);
+          uint16_t ip_len = udp_len + sizeof(ip6_hdr);
+          reply_udp->uh_ulen = htons(udp_len);
+          reply_ip6->ip6_plen = htons(udp_len);
+          validateAndFillChecksum(output, ip_len);
+
+          HAL_SendIPPacket(0, output, ip_len, dest_mac);
+
+          last_time = HAL_GetTicks();
         }
-
-        // TODO（4 行）
-        // 文件名字段（argv[3]）
-
-        // TODO（4 行）
-        // 传输模式字段，设为 octet
-
-        // 根据 TFTP 消息长度，计算 UDP 和 IPv6 头部中的长度字段
-        uint16_t udp_len = tftp_len + sizeof(udphdr);
-        uint16_t ip_len = udp_len + sizeof(ip6_hdr);
-        reply_udp->uh_ulen = htons(udp_len);
-        reply_ip6->ip6_plen = htons(udp_len);
-        validateAndFillChecksum(output, ip_len);
-
-        HAL_SendIPPacket(0, output, ip_len, dest_mac);
-
-        current_transfer.state = InTransfer;
       }
     }
 
@@ -248,7 +288,7 @@ int main(int argc, char *argv[]) {
       printf("Received invalid ipv6 packet (%d < %d)\n", res, sizeof(ip6_hdr));
       continue;
     }
-    uint16_t plen = htons(ip6->ip6_plen);
+    uint16_t plen = ntohs(ip6->ip6_plen);
     if (res < plen + sizeof(ip6_hdr)) {
       printf("Received invalid ipv6 packet (%d < %d + %d)\n", res, plen,
              sizeof(ip6_hdr));
@@ -286,6 +326,7 @@ int main(int argc, char *argv[]) {
           if (current_transfer.server_tid == 0) {
             // 则设置服务端 TID 为源 UDP 端口
             current_transfer.server_tid = ntohs(udp->uh_sport);
+            current_transfer.state = InTransfer;
           } else {
             // TODO（1 行）
             // 检查 UDP 端口，如果源 UDP 端口不等于服务端 TID 则忽略
@@ -310,8 +351,15 @@ int main(int argc, char *argv[]) {
               // 如果等于，则把文件内容写到文件中
               // 并更新最后一次传输的 Block Number
 
+              uint16_t block_size = 0;
+
               // 如果块的大小小于 512，说明这是最后一个块，写入文件后，
               // 关闭文件，发送 ACK 后就可以退出程序
+              if (block_size < 512) {
+                fclose(current_transfer.fp);
+                printf("Get file done\n");
+                done = true;
+              }
             }
 
             // 发送 ACK，其 Block Number 为最后一次传输的 Block Number
@@ -337,6 +385,7 @@ int main(int argc, char *argv[]) {
 
               } else if (current_transfer.state == LastAck) {
                 // 收到最后一个 ACK，说明文件传输完成
+                printf("Put file done\n");
                 done = true;
               }
             } else {
@@ -345,6 +394,18 @@ int main(int argc, char *argv[]) {
               // 说明最后一次传输的块没有传输成功
               // 重新发送最后一次传输的块
             }
+          } else if (opcode == 5) {
+            // 如果 Opcode 是 0x05(ERROR)
+            // 输出错误信息并退出
+            uint16_t error_code = ntohs(tftp->error_code);
+
+            char error_message[1024];
+            strncpy(error_message,
+                    (char *)&packet[sizeof(ip6_hdr) + sizeof(udphdr) + 4],
+                    sizeof(error_message));
+
+            printf("Got error #%d: %s\n", error_code, error_message);
+            done = true;
           }
         }
       }
