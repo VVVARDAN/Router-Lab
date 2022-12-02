@@ -457,15 +457,15 @@ int main(int argc, char *argv[]) {
         // TODO（1 行）
         // 如果是 ICMPv6 packet
         // 检查是否是 Router Solicitation
-        FILE *fptr = fopen("my_log_f.txt", "w");
-        fprintf(fptr, "HEEEEY I AM HERE!!!\n");
-        fclose(fptr);
+        //FILE *fptr = fopen("my_log_f.txt", "w");
+        //fprintf(fptr, "HEEEEY I AM HERE!!!\n");
+        //fclose(fptr);
         icmp6_hdr *icmp6 = (icmp6_hdr *)&packet[40];
         if ((int)icmp6->icmp6_type == 133) {
           
-        FILE *fptr = fopen("my_log_f_2.txt", "w");
-        fprintf(fptr, "HEEEEY I AM HERE!!!\n");
-        fclose(fptr);
+        //FILE *fptr = fopen("my_log_f_2.txt", "w");
+        //fprintf(fptr, "HEEEEY I AM HERE!!!\n");
+        //fclose(fptr);
           // TODO（70 行）
           // 如果是 Router Solicitation，生成一个 Router Advertisement 并发送
           // 源 IPv6 地址是本路由器在本接口上的 Link Local 地址
@@ -539,13 +539,13 @@ int main(int argc, char *argv[]) {
           cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
           cud_dest_mac.ether_addr_octet[5] = 0x01;
           
-          freopen("my_log_f_3.txt","w",stdout);
-          cout<<(int)(sizeof(ip6_hdr))<<endl;
+          //freopen("my_log_f_3.txt","w",stdout);
+          //cout<<(int)(sizeof(ip6_hdr))<<endl;
           //cout<<(int)packet[0]<<endl;
-            for(int i = 0;i<st_point+32;i++){
-              cout<<hex<<(int)packet[i]<<" ";
-            }
-            cout<<endl;
+            //for(int i = 0;i<st_point+32;i++){
+              //cout<<hex<<(int)packet[i]<<" ";
+            //}
+            //cout<<endl;
           memcpy(output, packet, st_point+32);
           HAL_SendIPPacket(if_index, output, st_point+32, cud_dest_mac);
           
