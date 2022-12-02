@@ -9,6 +9,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
+
+#include <fstream>
+
+using namespace std;
 
 uint8_t packet[2048];
 uint8_t output[2048];
@@ -131,7 +136,8 @@ int main(int argc, char *argv[]) {
     // 修改这个检查，当目的地址为 ICMPv6 RA
     // 的组播目的地址（ff02::2）或者 DHCPv6 Solicit
     // 的组播目的地址（ff02::1:2）时也设置 dst_is_me 为 true。
-    if (false) {
+    if ((ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[15] == 0x02) ||
+        (ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[13] == 0x01 && ip6->ip6_dst.s6_addr[15] == 0x02)) {
       dst_is_me = true;
     }
 
@@ -150,115 +156,316 @@ int main(int argc, char *argv[]) {
         // TODO（1 行）
         // 检查 UDP 端口，判断是否为 DHCPv6 message
         udphdr *udp = (udphdr *)&packet[sizeof(ip6_hdr)];
-        if (false) {
+        if (udp->uh_dport == htons(547)) {
           dhcpv6_hdr *dhcpv6 =
               (dhcpv6_hdr *)&packet[sizeof(ip6_hdr) + sizeof(udphdr)];
+          
+          int start_point = sizeof(ip6_hdr) + sizeof(udphdr);
           // TODO（1 行）
           // 检查是否为 DHCPv6 Solicit 或 DHCPv6 Request
-          if (false) {
+          if (dhcpv6->msg_type == 1 || dhcpv6->msg_type == 3) {
             // TODO（20 行）
             // 解析 DHCPv6 头部后的 Option，找到其中的 Client Identifier
             // 和 IA_NA 中的 IAID
             // https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
             // https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
+            if(dhcpv6->msg_type == 1){
+              in6_addr iaid, trans_id;
+              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[166+i];
+              for(int i = 0; i<3; i++) trans_id.s6_addr[i] = packet[start_point+1+i];
+              // 构造响应的 IPv6 头部
+              // IPv6 header
+              ip6_hdr *reply_ip6 = (ip6_hdr *)&output[0];
+              // flow label
+              reply_ip6->ip6_flow = 0;
+              // version
+              reply_ip6->ip6_vfc = 6 << 4;
+              // next header
+              reply_ip6->ip6_nxt = IPPROTO_UDP;
+              // hop limit
+              reply_ip6->ip6_hlim = 255;
+              // 源 IPv6 地址应为 Link Local 地址
+              // src ip
+              ether_addr mac_addr;
+              HAL_GetInterfaceMacAddress(if_index, &mac_addr);
+              reply_ip6->ip6_src = eui64(mac_addr);
+              // dst ip
+              reply_ip6->ip6_dst = ip6->ip6_src;
 
-            // 构造响应的 IPv6 头部
-            // IPv6 header
-            ip6_hdr *reply_ip6 = (ip6_hdr *)&output[0];
-            // flow label
-            reply_ip6->ip6_flow = 0;
-            // version
-            reply_ip6->ip6_vfc = 6 << 4;
-            // next header
-            reply_ip6->ip6_nxt = IPPROTO_UDP;
-            // hop limit
-            reply_ip6->ip6_hlim = 255;
-            // 源 IPv6 地址应为 Link Local 地址
-            // src ip
-            ether_addr mac_addr;
-            HAL_GetInterfaceMacAddress(if_index, &mac_addr);
-            reply_ip6->ip6_src = eui64(mac_addr);
-            // dst ip
-            reply_ip6->ip6_dst = ip6->ip6_src;
+              udphdr *reply_udp = (udphdr *)&output[sizeof(ip6_hdr)];
+              // src port
+              reply_udp->uh_sport = htons(547);
+              // dst port
+              reply_udp->uh_dport = htons(546);
 
-            udphdr *reply_udp = (udphdr *)&output[sizeof(ip6_hdr)];
-            // src port
-            reply_udp->uh_sport = htons(547);
-            // dst port
-            reply_udp->uh_dport = htons(546);
+              dhcpv6_hdr *reply_dhcpv6 =
+                  (dhcpv6_hdr *)&output[sizeof(ip6_hdr) + sizeof(udphdr)];
+              // TODO（100 行）
+              // 如果是 DHCPv6 Solicit，说明客户端想要寻找一个 DHCPv6 服务器
+              // 生成一个 DHCPv6 Advertise 并发送
+              // 如果是 DHCPv6 Request，说明客户端想要获取动态 IPv6 地址
+              // 生成一个 DHCPv6 Reply 并发送
 
-            dhcpv6_hdr *reply_dhcpv6 =
-                (dhcpv6_hdr *)&output[sizeof(ip6_hdr) + sizeof(udphdr)];
-            // TODO（100 行）
-            // 如果是 DHCPv6 Solicit，说明客户端想要寻找一个 DHCPv6 服务器
-            // 生成一个 DHCPv6 Advertise 并发送
-            // 如果是 DHCPv6 Request，说明客户端想要获取动态 IPv6 地址
-            // 生成一个 DHCPv6 Reply 并发送
+              // 响应的 Transaction ID 与 DHCPv6 Solicit/Request 一致。
+              output[start_point] = 0x02;
+              for(int i = 0;i<3;i++) output[start_point+1+i] = trans_id.s6_addr[i];
+              uint16_t dhcpv6_len = 18+18+44+36;
+              // 响应的 DHCPv6 Advertise 和 DHCPv6 Reply
+              // 都包括如下的 Option：
 
-            // 响应的 Transaction ID 与 DHCPv6 Solicit/Request 一致。
+              // 1. Server Identifier：根据本路由器在本接口上的 MAC 地址生成。
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.3
+              //    - Option Code: 2
+              //    - Option Length: 14
+              //    - DUID Type: 1 (Link-layer address plus time)
+              //    - Hardware Type: 1 (Ethernet)
+              //    - DUID Time: 0
+              //    - Link layer address: MAC Address
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18;
+              output[start_point] = 0x00, output[start_point+1] = 0x02;
+              output[start_point+2] = 0x00, output[start_point+3] = 0x0e;
+              output[start_point+4] = 0x00, output[start_point+5] = 0x01;
+              output[start_point+6] = 0x00, output[start_point+7] = 0x01;
+              output[start_point+8] = 0x00, output[start_point+9] = 0x00;
+              output[start_point+10] = 0x00, output[start_point+11] = 0x00;
+              for(int i = 0;i<6;i++){
+                output[start_point+12+i] = mac_addr.ether_addr_octet[i];
+              }
+              // 2. Client Identifier
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
+              //    - Option Code: 1
+              //    - Option Length: 和 Solicit/Request 中的 Client Identifier
+              //    一致
+              //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
+              
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44;
+              output[start_point] = 0x00, output[start_point+1] = 0x01;
+              output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
+              for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
+              // 3. Identity Association for Non-temporary
+              // Address：记录服务器将会分配给客户端的 IPv6 地址。
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
+              //    - Option Code: 3
+              //    - Option Length: 40
+              //    - IAID: 和 Solicit/Request 中的 Identity Association for
+              //    Non-temporary Address 一致
+              //    - T1: 0
+              //    - T2: 0
+              //    - IA_NA options:
+              //      - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.6
+              //      - Option code: 5 (IA address)
+              //      - Length: 24
+              //      - IPv6 Address: fd00::1:2
+              //      - Preferred lifetime: 54000s
+              //      - Valid lifetime: 86400s
+              
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
+              output[start_point] = 0; output[start_point+1] = 0x03;
+              output[start_point+2] = 0; output[start_point+3] = 0x28;
+              for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
+              for(int i = 0;i<8;i++) output[start_point+8+i] = 0;
+              start_point+=16;
+              output[start_point] = 0; output[start_point+1] = 0x05;
+              output[start_point+2] = 0; output[start_point+3] = 0x18;
+              output[start_point+4] = 0xfd;
+              for(int i = 1;i<13;i++) output[start_point+4+i] = 0x00;
+              output[start_point+4+13] = 0x01;
+              output[start_point+4+14] = 0x00;
+              output[start_point+4+15] = 0x02;
+              start_point+=20;
+              output[start_point] = output[start_point+1] = 0x00;
+              output[start_point+2] = 0xd2, output[start_point+3] = 0xf0;
+              output[start_point+4] = 0x00, output[start_point+5] = 0x01;
+              output[start_point+6] = 0x51, output[start_point+7] = 0x80;
+              // 4. DNS recursive name server：包括两个 DNS 服务器地址
+              // 2402:f000:1:801::8:28 和 2402:f000:1:801::8:29。
+              //    - https://www.rfc-editor.org/rfc/rfc3646#section-3
+              //    - Option Code: 23
+              //    - Option Length: 32
+              //    - DNS: 2402:f000:1:801::8:28
+              //    - DNS: 2402:f000:1:801::8:29
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18 + 18;
+              output[start_point] = 0x00, output[start_point+1] = 0x17;
+              output[start_point+2] = 0x00, output[start_point+3] = 0x20;
+              start_point+=4;
+              output[start_point] = 0x24, output[start_point+1] = 0x02, output[start_point+2] = 0xf0, output[start_point+3] = 0x00;
+              start_point+=4;
+              output[start_point] = 0x00, output[start_point+1] = 0x01, output[start_point+2] = 0x8, output[start_point+3] = 0x01;
+              start_point+=8;
+              output[start_point] = 0x00, output[start_point+1] = 0x08, output[start_point+2] = 0x00, output[start_point+3] = 0x28;
+              start_point+=4;
+              output[start_point] = 0x24, output[start_point+1] = 0x02, output[start_point+2] = 0xf0, output[start_point+3] = 0x00;
+              start_point+=4;
+              output[start_point] = 0x00, output[start_point+1] = 0x01, output[start_point+2] = 0x8, output[start_point+3] = 0x01;
+              start_point+=8;
+              output[start_point] = 0x00, output[start_point+1] = 0x08, output[start_point+2] = 0x00, output[start_point+3] = 0x29;
 
-            uint16_t dhcpv6_len = 0;
-            // 响应的 DHCPv6 Advertise 和 DHCPv6 Reply
-            // 都包括如下的 Option：
+              // 根据 DHCPv6 消息长度，计算 UDP 和 IPv6 头部中的长度字段
+            
+              uint16_t udp_len = dhcpv6_len + sizeof(dhcpv6_hdr) + sizeof(udphdr);
+              uint16_t ip_len = udp_len + sizeof(ip6_hdr);
+              reply_udp->uh_ulen = htons(udp_len);
+              reply_ip6->ip6_plen = htons(udp_len);
+              validateAndFillChecksum(output, ip_len);
 
-            // 1. Server Identifier：根据本路由器在本接口上的 MAC 地址生成。
-            //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.3
-            //    - Option Code: 2
-            //    - Option Length: 14
-            //    - DUID Type: 1 (Link-layer address plus time)
-            //    - Hardware Type: 1 (Ethernet)
-            //    - DUID Time: 0
-            //    - Link layer address: MAC Address
+              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
+            }
+            else{
+              in6_addr iaid, trans_id;
+              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[180+i];
+              for(int i = 0; i<3; i++) trans_id.s6_addr[i] = packet[start_point+1+i];
+              // 构造响应的 IPv6 头部
+              // IPv6 header
+              ip6_hdr *reply_ip6 = (ip6_hdr *)&output[0];
+              // flow label
+              reply_ip6->ip6_flow = 0;
+              // version
+              reply_ip6->ip6_vfc = 6 << 4;
+              // next header
+              reply_ip6->ip6_nxt = IPPROTO_UDP;
+              // hop limit
+              reply_ip6->ip6_hlim = 255;
+              // 源 IPv6 地址应为 Link Local 地址
+              // src ip
+              ether_addr mac_addr;
+              HAL_GetInterfaceMacAddress(if_index, &mac_addr);
+              reply_ip6->ip6_src = eui64(mac_addr);
+              // dst ip
+              reply_ip6->ip6_dst = ip6->ip6_src;
 
-            // 2. Client Identifier
-            //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
-            //    - Option Code: 1
-            //    - Option Length: 和 Solicit/Request 中的 Client Identifier
-            //    一致
-            //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
+              udphdr *reply_udp = (udphdr *)&output[sizeof(ip6_hdr)];
+              // src port
+              reply_udp->uh_sport = htons(547);
+              // dst port
+              reply_udp->uh_dport = htons(546);
 
-            // 3. Identity Association for Non-temporary
-            // Address：记录服务器将会分配给客户端的 IPv6 地址。
-            //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
-            //    - Option Code: 3
-            //    - Option Length: 40
-            //    - IAID: 和 Solicit/Request 中的 Identity Association for
-            //    Non-temporary Address 一致
-            //    - T1: 0
-            //    - T2: 0
-            //    - IA_NA options:
-            //      - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.6
-            //      - Option code: 5 (IA address)
-            //      - Length: 24
-            //      - IPv6 Address: fd00::1:2
-            //      - Preferred lifetime: 54000s
-            //      - Valid lifetime: 86400s
+              dhcpv6_hdr *reply_dhcpv6 =
+                  (dhcpv6_hdr *)&output[sizeof(ip6_hdr) + sizeof(udphdr)];
+              // TODO（100 行）
+              // 如果是 DHCPv6 Solicit，说明客户端想要寻找一个 DHCPv6 服务器
+              // 生成一个 DHCPv6 Advertise 并发送
+              // 如果是 DHCPv6 Request，说明客户端想要获取动态 IPv6 地址
+              // 生成一个 DHCPv6 Reply 并发送
 
-            // 4. DNS recursive name server：包括两个 DNS 服务器地址
-            // 2402:f000:1:801::8:28 和 2402:f000:1:801::8:29。
-            //    - https://www.rfc-editor.org/rfc/rfc3646#section-3
-            //    - Option Code: 23
-            //    - Option Length: 32
-            //    - DNS: 2402:f000:1:801::8:28
-            //    - DNS: 2402:f000:1:801::8:29
+              // 响应的 Transaction ID 与 DHCPv6 Solicit/Request 一致。
+              output[start_point] = 0x07;
+              for(int i = 0;i<3;i++) output[start_point+1+i] = trans_id.s6_addr[i];
+              uint16_t dhcpv6_len = 18+18+44+36;
+              // 响应的 DHCPv6 Advertise 和 DHCPv6 Reply
+              // 都包括如下的 Option：
 
-            // 根据 DHCPv6 消息长度，计算 UDP 和 IPv6 头部中的长度字段
-            uint16_t udp_len = dhcpv6_len + sizeof(dhcpv6_hdr) + sizeof(udphdr);
-            uint16_t ip_len = udp_len + sizeof(ip6_hdr);
-            reply_udp->uh_ulen = htons(udp_len);
-            reply_ip6->ip6_plen = htons(udp_len);
-            validateAndFillChecksum(output, ip_len);
+              // 1. Server Identifier：根据本路由器在本接口上的 MAC 地址生成。
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.3
+              //    - Option Code: 2
+              //    - Option Length: 14
+              //    - DUID Type: 1 (Link-layer address plus time)
+              //    - Hardware Type: 1 (Ethernet)
+              //    - DUID Time: 0
+              //    - Link layer address: MAC Address
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18;
+              output[start_point] = 0x00, output[start_point+1] = 0x02;
+              output[start_point+2] = 0x00, output[start_point+3] = 0x0e;
+              output[start_point+4] = 0x00, output[start_point+5] = 0x01;
+              output[start_point+6] = 0x00, output[start_point+7] = 0x01;
+              output[start_point+8] = 0x00, output[start_point+9] = 0x00;
+              output[start_point+10] = 0x00, output[start_point+11] = 0x00;
+              for(int i = 0;i<6;i++){
+                output[start_point+12+i] = mac_addr.ether_addr_octet[i];
+              }
+              // 2. Client Identifier
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
+              //    - Option Code: 1
+              //    - Option Length: 和 Solicit/Request 中的 Client Identifier
+              //    一致
+              //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
+              
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44;
+              output[start_point] = 0x00, output[start_point+1] = 0x01;
+              output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
+              for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
+              // 3. Identity Association for Non-temporary
+              // Address：记录服务器将会分配给客户端的 IPv6 地址。
+              //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
+              //    - Option Code: 3
+              //    - Option Length: 40
+              //    - IAID: 和 Solicit/Request 中的 Identity Association for
+              //    Non-temporary Address 一致
+              //    - T1: 0
+              //    - T2: 0
+              //    - IA_NA options:
+              //      - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.6
+              //      - Option code: 5 (IA address)
+              //      - Length: 24
+              //      - IPv6 Address: fd00::1:2
+              //      - Preferred lifetime: 54000s
+              //      - Valid lifetime: 86400s
+              
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
+              output[start_point] = 0; output[start_point+1] = 0x03;
+              output[start_point+2] = 0; output[start_point+3] = 0x28;
+              for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
+              for(int i = 0;i<8;i++) output[start_point+8+i] = 0;
+              start_point+=16;
+              output[start_point] = 0; output[start_point+1] = 0x05;
+              output[start_point+2] = 0; output[start_point+3] = 0x18;
+              output[start_point+4] = 0xfd;
+              for(int i = 1;i<13;i++) output[start_point+4+i] = 0x00;
+              output[start_point+4+13] = 0x01;
+              output[start_point+4+14] = 0x00;
+              output[start_point+4+15] = 0x02;
+              start_point+=20;
+              output[start_point] = output[start_point+1] = 0x00;
+              output[start_point+2] = 0xd2, output[start_point+3] = 0xf0;
+              output[start_point+4] = 0x00, output[start_point+5] = 0x01;
+              output[start_point+6] = 0x51, output[start_point+7] = 0x80;
+              // 4. DNS recursive name server：包括两个 DNS 服务器地址
+              // 2402:f000:1:801::8:28 和 2402:f000:1:801::8:29。
+              //    - https://www.rfc-editor.org/rfc/rfc3646#section-3
+              //    - Option Code: 23
+              //    - Option Length: 32
+              //    - DNS: 2402:f000:1:801::8:28
+              //    - DNS: 2402:f000:1:801::8:29
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18 + 18;
+              output[start_point] = 0x00, output[start_point+1] = 0x17;
+              output[start_point+2] = 0x00, output[start_point+3] = 0x20;
+              start_point+=4;
+              output[start_point] = 0x24, output[start_point+1] = 0x02, output[start_point+2] = 0xf0, output[start_point+3] = 0x00;
+              start_point+=4;
+              output[start_point] = 0x00, output[start_point+1] = 0x01, output[start_point+2] = 0x8, output[start_point+3] = 0x01;
+              start_point+=8;
+              output[start_point] = 0x00, output[start_point+1] = 0x08, output[start_point+2] = 0x00, output[start_point+3] = 0x28;
+              start_point+=4;
+              output[start_point] = 0x24, output[start_point+1] = 0x02, output[start_point+2] = 0xf0, output[start_point+3] = 0x00;
+              start_point+=4;
+              output[start_point] = 0x00, output[start_point+1] = 0x01, output[start_point+2] = 0x8, output[start_point+3] = 0x01;
+              start_point+=8;
+              output[start_point] = 0x00, output[start_point+1] = 0x08, output[start_point+2] = 0x00, output[start_point+3] = 0x29;
 
-            HAL_SendIPPacket(if_index, output, ip_len, src_mac);
+              // 根据 DHCPv6 消息长度，计算 UDP 和 IPv6 头部中的长度字段
+            
+              uint16_t udp_len = dhcpv6_len + sizeof(dhcpv6_hdr) + sizeof(udphdr);
+              uint16_t ip_len = udp_len + sizeof(ip6_hdr);
+              reply_udp->uh_ulen = htons(udp_len);
+              reply_ip6->ip6_plen = htons(udp_len);
+              validateAndFillChecksum(output, ip_len);
+
+              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
+            }
           }
         }
       } else if (ip6->ip6_nxt == IPPROTO_ICMPV6) {
         // TODO（1 行）
         // 如果是 ICMPv6 packet
         // 检查是否是 Router Solicitation
-
-        icmp6_hdr *icmp6 = (icmp6_hdr *)&packet[sizeof(ip6_hdr)];
-        if (false) {
+        FILE *fptr = fopen("my_log_f.txt", "w");
+        fprintf(fptr, "HEEEEY I AM HERE!!!\n");
+        fclose(fptr);
+        icmp6_hdr *icmp6 = (icmp6_hdr *)&packet[40];
+        if ((int)icmp6->icmp6_type == 133) {
+          
+        FILE *fptr = fopen("my_log_f_2.txt", "w");
+        fprintf(fptr, "HEEEEY I AM HERE!!!\n");
+        fclose(fptr);
           // TODO（70 行）
           // 如果是 Router Solicitation，生成一个 Router Advertisement 并发送
           // 源 IPv6 地址是本路由器在本接口上的 Link Local 地址
@@ -280,6 +487,69 @@ int main(int argc, char *argv[]) {
           //    - Type: 5
           //    - Length: 1
           //    - MTU: 1500
+          ip6_hdr *reply_ip6 = (ip6_hdr *)&packet[0];
+          
+          // 源 IPv6 地址应为 Link Local 地址
+          // src ip
+          ether_addr mac_addr;
+          HAL_GetInterfaceMacAddress(if_index, &mac_addr);
+          reply_ip6->ip6_src = eui64(mac_addr);
+          // dst ip
+          reply_ip6->ip6_dst.s6_addr[0] = 0xff;
+          reply_ip6->ip6_dst.s6_addr[1] = 0x02;
+          reply_ip6->ip6_dst.s6_addr[15] = 0x01;
+          reply_ip6->ip6_flow = 0;
+          // version
+          reply_ip6->ip6_vfc = 110;
+          // next header
+          reply_ip6->ip6_nxt = 58;
+          // hop limit
+          reply_ip6->ip6_hlim = 255;
+          packet[4] = 0x00;
+          packet[5] = 0x20;
+          //reply_ip6->ip6_un2_vfc = 110;
+          //reply_ip6->ip6_plen = 64;
+          //reply_ip6->ip6_un1_flow = 0;
+          
+          int st_point = 40;
+          packet[st_point] = 0x86;
+          packet[st_point+1] = 0x00;
+          packet[st_point+4] = 0x40;
+          packet[st_point+5] = 0xC8;
+          packet[st_point+7] = 0xD2;
+          packet[st_point+16] = 0x01;
+          packet[st_point+17] = 0x01;
+          for(int i = 0;i<6;i++){
+            packet[st_point+18+i] = mac_addr.ether_addr_octet[i];
+          }
+          packet[st_point+18+6] = 0x05;
+          packet[st_point+18+7] = 0x01;
+          packet[st_point+30] = 0x05;
+          packet[st_point+31] = 0xdc;
+          validateAndFillChecksum(packet, st_point+32);
+          //packet[st_point+2] = 0xe4;
+          //packet[st_point+3] = 0xf9;
+          //packet[14] = 0x6e;
+          //packet[15] = packet[16] = packet[17] = 0x00;
+          //packet[18] = 0x00;
+          //packet[19] = 0x40;
+          //memcpy(output, packet, st_point+32);
+          ether_addr cud_dest_mac;
+          cud_dest_mac.ether_addr_octet[0] = cud_dest_mac.ether_addr_octet[1] = 0x33;
+          cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
+          cud_dest_mac.ether_addr_octet[5] = 0x01;
+          
+          freopen("my_log_f_3.txt","w",stdout);
+          cout<<(int)(sizeof(ip6_hdr))<<endl;
+          //cout<<(int)packet[0]<<endl;
+            for(int i = 0;i<st_point+32;i++){
+              cout<<hex<<(int)packet[i]<<" ";
+            }
+            cout<<endl;
+          memcpy(output, packet, st_point+32);
+          HAL_SendIPPacket(if_index, output, st_point+32, cud_dest_mac);
+          
+          //don't forget to add checksum
         }
       }
       continue;
