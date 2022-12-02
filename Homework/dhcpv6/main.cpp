@@ -228,9 +228,12 @@ int main(int argc, char *argv[]) {
               output[start_point+6] = 0x00, output[start_point+7] = 0x01;
               output[start_point+8] = 0x00, output[start_point+9] = 0x00;
               output[start_point+10] = 0x00, output[start_point+11] = 0x00;
+              freopen("mac_addr_log.txt","w",stdout);
               for(int i = 0;i<6;i++){
                 output[start_point+12+i] = mac_addr.ether_addr_octet[i];
+                cout<<hex<<(int)mac_addr.ether_addr_octet[i]<<" ";
               }
+              cout<<endl;
               // 2. Client Identifier
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
               //    - Option Code: 1
@@ -307,8 +310,12 @@ int main(int argc, char *argv[]) {
               reply_udp->uh_ulen = htons(udp_len);
               reply_ip6->ip6_plen = htons(udp_len);
               validateAndFillChecksum(output, ip_len);
+              ether_addr cud_dest_mac;
+              cud_dest_mac.ether_addr_octet[0] = cud_dest_mac.ether_addr_octet[1] = 0x33;
+              cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
+              cud_dest_mac.ether_addr_octet[5] = 0x01;
 
-              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
+              HAL_SendIPPacket(if_index, output, ip_len, cud_dest_mac);
             }
             else{
               in6_addr iaid, trans_id;
@@ -448,8 +455,11 @@ int main(int argc, char *argv[]) {
               reply_udp->uh_ulen = htons(udp_len);
               reply_ip6->ip6_plen = htons(udp_len);
               validateAndFillChecksum(output, ip_len);
-
-              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
+              ether_addr cud_dest_mac;
+              cud_dest_mac.ether_addr_octet[0] = cud_dest_mac.ether_addr_octet[1] = 0x33;
+              cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
+              cud_dest_mac.ether_addr_octet[5] = 0x01;
+              HAL_SendIPPacket(if_index, output, ip_len, cud_dest_mac);
             }
           }
         }
