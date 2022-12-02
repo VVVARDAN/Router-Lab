@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
               //    - Hardware Type: 1 (Ethernet)
               //    - DUID Time: 0
               //    - Link layer address: MAC Address
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18;
               output[start_point] = 0x00, output[start_point+1] = 0x02;
               output[start_point+2] = 0x00, output[start_point+3] = 0x0e;
               output[start_point+4] = 0x00, output[start_point+5] = 0x01;
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
               //    一致
               //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44;
               output[start_point] = 0x00, output[start_point+1] = 0x01;
               output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
               for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
               //      - Preferred lifetime: 54000s
               //      - Valid lifetime: 86400s
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
               output[start_point] = 0; output[start_point+1] = 0x03;
               output[start_point+2] = 0; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
               //    - Option Length: 32
               //    - DNS: 2402:f000:1:801::8:28
               //    - DNS: 2402:f000:1:801::8:29
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18 + 44;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18 + 18;
               output[start_point] = 0x00, output[start_point+1] = 0x17;
               output[start_point+2] = 0x00, output[start_point+3] = 0x20;
               start_point+=4;
@@ -362,7 +362,7 @@ int main(int argc, char *argv[]) {
               //    - Hardware Type: 1 (Ethernet)
               //    - DUID Time: 0
               //    - Link layer address: MAC Address
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18;
               output[start_point] = 0x00, output[start_point+1] = 0x02;
               output[start_point+2] = 0x00, output[start_point+3] = 0x0e;
               output[start_point+4] = 0x00, output[start_point+5] = 0x01;
@@ -379,7 +379,7 @@ int main(int argc, char *argv[]) {
               //    一致
               //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44;
               output[start_point] = 0x00, output[start_point+1] = 0x01;
               output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
               for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
@@ -400,7 +400,7 @@ int main(int argc, char *argv[]) {
               //      - Preferred lifetime: 54000s
               //      - Valid lifetime: 86400s
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4;
               output[start_point] = 0; output[start_point+1] = 0x03;
               output[start_point+2] = 0; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
@@ -425,7 +425,7 @@ int main(int argc, char *argv[]) {
               //    - Option Length: 32
               //    - DNS: 2402:f000:1:801::8:28
               //    - DNS: 2402:f000:1:801::8:29
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18 + 44;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 44 + 18 + 18;
               output[start_point] = 0x00, output[start_point+1] = 0x17;
               output[start_point+2] = 0x00, output[start_point+3] = 0x20;
               start_point+=4;
