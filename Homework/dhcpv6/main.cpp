@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
               // 响应的 Transaction ID 与 DHCPv6 Solicit/Request 一致。
               output[start_point] = 0x02;
               for(int i = 0;i<3;i++) output[start_point+1+i] = trans_id.s6_addr[i];
-              uint16_t dhcpv6_len = 18+18+44+36;
+              uint16_t dhcpv6_len = 18+(4+(int)packet[55])+44+36;
               // 响应的 DHCPv6 Advertise 和 DHCPv6 Reply
               // 都包括如下的 Option：
 
@@ -253,9 +253,9 @@ int main(int argc, char *argv[]) {
               //    - DUID: 和 Solicit/Request 中的 Client Identifier 一致
               
               start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18;
-              output[start_point] = 0x00, output[start_point+1] = 0x01;
+              output[start_point] = 0x00; output[start_point+1] = 0x01;
               output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
-              for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
+              for(int i = 0;i<(int)packet[55];i++) output[start_point+4+i] = packet[56+i];
               // 3. Identity Association for Non-temporary
               // Address：记录服务器将会分配给客户端的 IPv6 地址。
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
               //      - Preferred lifetime: 54000s
               //      - Valid lifetime: 86400s
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + (4+(int)packet[55]);
               output[start_point] = 0x00; output[start_point+1] = 0x03;
               output[start_point+2] = 0x00; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
               //    - Option Length: 32
               //    - DNS: 2402:f000:1:801::8:28
               //    - DNS: 2402:f000:1:801::8:29
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18 + 44;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + (4+(int)packet[55]) + 44;
               output[start_point] = 0x00, output[start_point+1] = 0x17;
               output[start_point+2] = 0x00, output[start_point+3] = 0x20;
               start_point+=4;
@@ -370,7 +370,7 @@ int main(int argc, char *argv[]) {
               // 响应的 Transaction ID 与 DHCPv6 Solicit/Request 一致。
               output[start_point] = 0x07;
               for(int i = 0;i<3;i++) output[start_point+1+i] = trans_id.s6_addr[i];
-              uint16_t dhcpv6_len = 18+18+44+36;
+              uint16_t dhcpv6_len = 18+(4+(int)packet[55])+44+36;
               // 响应的 DHCPv6 Advertise 和 DHCPv6 Reply
               // 都包括如下的 Option：
 
@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
               start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18;
               output[start_point] = 0x00, output[start_point+1] = 0x01;
               output[start_point+2] = packet[54]; output[start_point+3] = packet[55];
-              for(int i = 0;i<14;i++) output[start_point+4+i] = packet[56+i];
+              for(int i = 0;i<((int)packet[55]);i++) output[start_point+4+i] = packet[56+i];
               // 3. Identity Association for Non-temporary
               // Address：记录服务器将会分配给客户端的 IPv6 地址。
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
@@ -420,7 +420,7 @@ int main(int argc, char *argv[]) {
               //      - Preferred lifetime: 54000s
               //      - Valid lifetime: 86400s
               
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + (4+(int)packet[55]);
               output[start_point] = 0x00; output[start_point+1] = 0x03;
               output[start_point+2] = 0x00; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
@@ -445,7 +445,7 @@ int main(int argc, char *argv[]) {
               //    - Option Length: 32
               //    - DNS: 2402:f000:1:801::8:28
               //    - DNS: 2402:f000:1:801::8:29
-              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18 + 44;
+              start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + (4+(int)packet[55]) + 44;
               output[start_point] = 0x00, output[start_point+1] = 0x17;
               output[start_point+2] = 0x00, output[start_point+3] = 0x20;
               start_point+=4;
