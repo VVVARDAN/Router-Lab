@@ -230,12 +230,12 @@ int main(int argc, char *argv[]) {
               output[start_point+6] = 0x00, output[start_point+7] = 0x01;
               output[start_point+8] = 0x00, output[start_point+9] = 0x00;
               output[start_point+10] = 0x00, output[start_point+11] = 0x00;
-              freopen("mac_addr_log.txt","w",stdout);
+              //freopen("mac_addr_log.txt","w",stdout);
               for(int i = 0;i<6;i++){
                 output[start_point+12+i] = mac_addr.ether_addr_octet[i];
-                cout<<hex<<(int)mac_addr.ether_addr_octet[i]<<" ";
+                //cout<<hex<<(int)mac_addr.ether_addr_octet[i]<<" ";
               }
-              cout<<endl;
+              //cout<<endl;
               // 2. Client Identifier
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
               //    - Option Code: 1
@@ -379,7 +379,7 @@ int main(int argc, char *argv[]) {
               output[start_point+8] = 0x00, output[start_point+9] = 0x00;
               output[start_point+10] = 0x00, output[start_point+11] = 0x00;
               for(int i = 0;i<6;i++){
-                output[start_point+12+i] = src_mac.ether_addr_octet[i];
+                output[start_point+12+i] = mac_addr.ether_addr_octet[i];
               }
               // 2. Client Identifier
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
@@ -533,7 +533,7 @@ int main(int argc, char *argv[]) {
           packet[st_point+16] = 0x01;
           packet[st_point+17] = 0x01;
           for(int i = 0;i<6;i++){
-            packet[st_point+18+i] = src_mac.ether_addr_octet[i];
+            packet[st_point+18+i] = mac_addr.ether_addr_octet[i];
           }
           packet[st_point+18+6] = 0x05;
           packet[st_point+18+7] = 0x01;
