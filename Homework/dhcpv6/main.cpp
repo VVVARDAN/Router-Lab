@@ -180,7 +180,9 @@ int main(int argc, char *argv[]) {
             // https://www.rfc-editor.org/rfc/rfc8415.html#section-21.4
             if(dhcpv6->msg_type == 1){
               in6_addr iaid, trans_id;
-              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[166+i];
+              int cur_st = 166;
+              for(int i = 0;i<1000;i++) if(packet[i] == 0x00 && packet[i+1] == 0x03) cur_st = i+4;
+              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[cur_st+i];
               for(int i = 0; i<3; i++) trans_id.s6_addr[i] = packet[start_point+1+i];
               // 构造响应的 IPv6 头部
               // IPv6 header
@@ -328,7 +330,9 @@ int main(int argc, char *argv[]) {
             }
             else{
               in6_addr iaid, trans_id;
-              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[180+i];
+              int cur_st = 180;
+              for(int i = 0;i<1000;i++) if(packet[i] == 0x00 && packet[i+1] == 0x03) cur_st = i+4;
+              for(int i = 0; i<4; i++) iaid.s6_addr[i] = packet[cur_st+i];
               for(int i = 0; i<3; i++) trans_id.s6_addr[i] = packet[start_point+1+i];
               // 构造响应的 IPv6 头部
               // IPv6 header
@@ -567,7 +571,7 @@ int main(int argc, char *argv[]) {
             //}
             //cout<<endl;
           memcpy(output, packet, st_point+32);
-          HAL_SendIPPacket(if_index, output, st_point+32, src_mac);
+          HAL_SendIPPacket(if_index, output, st_point+32, cud_dest_mac);
           
           //don't forget to add checksum
         }
