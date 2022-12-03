@@ -567,7 +567,7 @@ int main(int argc, char *argv[]) {
             //}
             //cout<<endl;
           memcpy(output, packet, st_point+32);
-          HAL_SendIPPacket(if_index, output, st_point+32, cud_dest_mac);
+          HAL_SendIPPacket(if_index, output, st_point+32, src_mac);
           
           //don't forget to add checksum
         }
