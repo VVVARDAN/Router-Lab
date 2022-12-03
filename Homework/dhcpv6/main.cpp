@@ -142,6 +142,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (dst_is_me) {
+      for(int i = 0;i<500;i++) output[i] = 0x00;
       // 目的地址是我，按照类型进行处理
 
       // 检查 checksum 是否正确
@@ -155,6 +156,7 @@ int main(int argc, char *argv[]) {
       if (ip6->ip6_nxt == IPPROTO_UDP) {
         // TODO（1 行）
         // 检查 UDP 端口，判断是否为 DHCPv6 message
+
         udphdr *udp = (udphdr *)&packet[sizeof(ip6_hdr)];
         if (udp->uh_dport == htons(547)) {
           dhcpv6_hdr *dhcpv6 =
@@ -310,12 +312,12 @@ int main(int argc, char *argv[]) {
               reply_udp->uh_ulen = htons(udp_len);
               reply_ip6->ip6_plen = htons(udp_len);
               validateAndFillChecksum(output, ip_len);
-              ether_addr cud_dest_mac;
+              /*ether_addr cud_dest_mac;
               cud_dest_mac.ether_addr_octet[0] = cud_dest_mac.ether_addr_octet[1] = 0x33;
               cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
               cud_dest_mac.ether_addr_octet[5] = 0x01;
-
-              HAL_SendIPPacket(if_index, output, ip_len, cud_dest_mac);
+              */
+              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
             }
             else{
               in6_addr iaid, trans_id;
@@ -377,7 +379,7 @@ int main(int argc, char *argv[]) {
               output[start_point+8] = 0x00, output[start_point+9] = 0x00;
               output[start_point+10] = 0x00, output[start_point+11] = 0x00;
               for(int i = 0;i<6;i++){
-                output[start_point+12+i] = mac_addr.ether_addr_octet[i];
+                output[start_point+12+i] = src_mac.ether_addr_octet[i];
               }
               // 2. Client Identifier
               //    - https://www.rfc-editor.org/rfc/rfc8415.html#section-21.2
@@ -455,11 +457,11 @@ int main(int argc, char *argv[]) {
               reply_udp->uh_ulen = htons(udp_len);
               reply_ip6->ip6_plen = htons(udp_len);
               validateAndFillChecksum(output, ip_len);
-              ether_addr cud_dest_mac;
+              /*ether_addr cud_dest_mac;
               cud_dest_mac.ether_addr_octet[0] = cud_dest_mac.ether_addr_octet[1] = 0x33;
               cud_dest_mac.ether_addr_octet[2] = cud_dest_mac.ether_addr_octet[3] = cud_dest_mac.ether_addr_octet[4] = 0x00;
-              cud_dest_mac.ether_addr_octet[5] = 0x01;
-              HAL_SendIPPacket(if_index, output, ip_len, cud_dest_mac);
+              cud_dest_mac.ether_addr_octet[5] = 0x01;*/
+              HAL_SendIPPacket(if_index, output, ip_len, src_mac);
             }
           }
         }
@@ -525,13 +527,13 @@ int main(int argc, char *argv[]) {
           packet[st_point] = 0x86;
           packet[st_point+1] = 0x00;
           packet[st_point+4] = 0x40;
-          packet[st_point+5] = 0xC8;
+          packet[st_point+5] = 0xC0;
           packet[st_point+7] = 0xD2;
           for(int i = st_point+8;i<st_point+16;i++) packet[i] = 0x00;
           packet[st_point+16] = 0x01;
           packet[st_point+17] = 0x01;
           for(int i = 0;i<6;i++){
-            packet[st_point+18+i] = mac_addr.ether_addr_octet[i];
+            packet[st_point+18+i] = src_mac.ether_addr_octet[i];
           }
           packet[st_point+18+6] = 0x05;
           packet[st_point+18+7] = 0x01;
