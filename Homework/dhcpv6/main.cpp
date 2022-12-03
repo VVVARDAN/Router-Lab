@@ -274,13 +274,13 @@ int main(int argc, char *argv[]) {
               //      - Valid lifetime: 86400s
               
               start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
-              output[start_point] = 0; output[start_point+1] = 0x03;
-              output[start_point+2] = 0; output[start_point+3] = 0x28;
+              output[start_point] = 0x00; output[start_point+1] = 0x03;
+              output[start_point+2] = 0x00; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
-              for(int i = 0;i<8;i++) output[start_point+8+i] = 0;
+              for(int i = 0;i<8;i++) output[start_point+8+i] = 0x00;
               start_point+=16;
-              output[start_point] = 0; output[start_point+1] = 0x05;
-              output[start_point+2] = 0; output[start_point+3] = 0x18;
+              output[start_point] = 0x00; output[start_point+1] = 0x05;
+              output[start_point+2] = 0x00; output[start_point+3] = 0x18;
               output[start_point+4] = 0xfd;
               for(int i = 1;i<13;i++) output[start_point+4+i] = 0x00;
               output[start_point+4+13] = 0x01;
@@ -421,13 +421,13 @@ int main(int argc, char *argv[]) {
               //      - Valid lifetime: 86400s
               
               start_point = sizeof(ip6_hdr) + sizeof(udphdr) + 4 + 18 + 18;
-              output[start_point] = 0; output[start_point+1] = 0x03;
-              output[start_point+2] = 0; output[start_point+3] = 0x28;
+              output[start_point] = 0x00; output[start_point+1] = 0x03;
+              output[start_point+2] = 0x00; output[start_point+3] = 0x28;
               for(int i = 0;i<4;i++) output[start_point+4+i] = iaid.s6_addr[i];
-              for(int i = 0;i<8;i++) output[start_point+8+i] = 0;
+              for(int i = 0;i<8;i++) output[start_point+8+i] = 0x00;
               start_point+=16;
-              output[start_point] = 0; output[start_point+1] = 0x05;
-              output[start_point+2] = 0; output[start_point+3] = 0x18;
+              output[start_point] = 0x00; output[start_point+1] = 0x05;
+              output[start_point+2] = 0x00; output[start_point+3] = 0x18;
               output[start_point+4] = 0xfd;
               for(int i = 1;i<13;i++) output[start_point+4+i] = 0x00;
               output[start_point+4+13] = 0x01;
