@@ -136,11 +136,18 @@ int main(int argc, char *argv[]) {
     // 修改这个检查，当目的地址为 ICMPv6 RA
     // 的组播目的地址（ff02::2）或者 DHCPv6 Solicit
     // 的组播目的地址（ff02::1:2）时也设置 dst_is_me 为 true。
-    if ((ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[15] == 0x02) ||
-        (ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[13] == 0x01 && ip6->ip6_dst.s6_addr[15] == 0x02)) {
-      dst_is_me = true;
+    if ((ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[15] == 0x02)) {
+      bool f = true;
+      for(int i = 2;i<15;i++) if(ip6->ip6_dst.s6_addr[i]!=0x00) f = false;
+      if(f)
+       dst_is_me = true;
     }
-
+    if (ip6->ip6_dst.s6_addr[0] == 0xff && ip6->ip6_dst.s6_addr[1] == 0x02 && ip6->ip6_dst.s6_addr[13] == 0x01 && ip6->ip6_dst.s6_addr[15] == 0x02){
+      bool f = true;
+      for(int i = 2;i<15;i++) if(ip6->ip6_dst.s6_addr[i]!=0x00 && i!=13) f = false;
+      if(f)
+       dst_is_me = true;
+    }
     if (dst_is_me) {
       for(int i = 0;i<500;i++) output[i] = 0x00;
       // 目的地址是我，按照类型进行处理
